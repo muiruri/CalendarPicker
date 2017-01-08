@@ -115,28 +115,47 @@ var Days = React.createClass({
     onDayChange: React.PropTypes.func.isRequired,
     selectedDayColor: React.PropTypes.string,
     selectedDayTextColor: React.PropTypes.string,
-    textStyle: Text.propTypes.style
+    textStyle: Text.propTypes.style,
+    startDate: React.PropTypes.instanceOf(Date),
+    endDate: React.PropTypes.instanceOf(Date)
   },
   getInitialState() {
     return {
-      selectedStates: []
+      selectedStates: [], selectedRanges: []
     };
   },
 
   componentDidMount() {
-    this.updateSelectedStates(this.props.date.getDate(), this.props.month, this.props.date.getMonth());
+    if(this.props.startDate && this.props.endDate) {
+      this.updateSelectedStates(this.props.startDate.getDate(), this.props.month, this.props.startDate.getMonth(), this.props.startDate, this.props.endDate);
+    } else {
+      this.updateSelectedStates(this.props.date.getDate(), this.props.month, this.props.date.getMonth());
+    }
   },
 
   // Trigger date change if new props are provided.
   // Typically, when selectedDate is changed programmatically.
   //
   componentWillReceiveProps: function(newProps) {
-    this.updateSelectedStates(newProps.date.getDate(), this.props.month, this.props.date.getMonth());
+    if(newProps.startDate && newProps.endDate) {
+      this.updateSelectedStates(newProps.startDate.getDate(), newProps.month, newProps.startDate.getMonth(), newProps.startDate, newProps.endDate);
+    } else {
+      this.updateSelectedStates(newProps.date.getDate(), newProps.month, newProps.date.getMonth());
+    }
   },
 
-  updateSelectedStates(day, month = 0, oldMonth = 0) {
+  dayInRange(day, month, startDate, endDate) {
+      var date = new Date(this.props.year, month, day);
+      if(date >= startDate && date <= endDate) {
+        return true;
+      }
+      return false;
+  },
+
+  updateSelectedStates(day, month = 0, oldMonth = 0, startDate = null, endDate = null) {
     var selectedStates = [],
-      daysInMonth = getDaysInMonth(this.props.month, this.props.year),
+      selectedRanges = [],
+      daysInMonth = getDaysInMonth(month, this.props.year),
       i;
 
     for (i = 1; i <= daysInMonth; i++) {
@@ -145,16 +164,24 @@ var Days = React.createClass({
       } else {
         selectedStates.push(false);
       }
+      if(startDate != null && endDate != null) {
+        if(this.dayInRange(i, month, startDate, endDate)) {
+          selectedRanges.push(true);
+        } else {
+          selectedRanges.push(false);
+        }
+      } else {
+        selectedRanges.push(false);
+      }
     }
 
     this.setState({
-      selectedStates: selectedStates
+      selectedStates: selectedStates, selectedRanges : selectedRanges
     });
-
   },
 
   onPressDay(day) {
-    this.updateSelectedStates(day);
+    //this.updateSelectedStates(day);
     this.props.onDayChange({day: day});
   },
 
@@ -179,10 +206,14 @@ var Days = React.createClass({
       for (j = 0; j < MAX_COLUMNS; j++) { // Day columns
         if (slotsAccumulator >= thisMonthFirstDay.getDay()) {
           if (currentDay < getDaysInMonth(month, year)) {
+            var selected = this.state.selectedStates[currentDay];
+            if(this.state.selectedRanges[currentDay]) {
+              selected = true;
+            }
             columns.push(<Day
                       key={j}
                       day={currentDay+1}
-                      selected={this.state.selectedStates[currentDay]}
+                      selected={selected}
                       date={new Date(year, month, currentDay + 1)}
                       maxDate={this.props.maxDate}
                       minDate={this.props.minDate}
@@ -380,7 +411,8 @@ var CalendarPicker = React.createClass({
     selectedDayColor: React.PropTypes.string,
     selectedDayTextColor: React.PropTypes.string,
     scaleFactor: React.PropTypes.number,
-    textStyle: Text.propTypes.style
+    textStyle: Text.propTypes.style,
+    allowDateRangeSelection: React.PropTypes.bool
   },
   getDefaultProps() {
     return {
@@ -396,7 +428,9 @@ var CalendarPicker = React.createClass({
       day: this.props.selectedDate.getDate(),
       month: this.props.selectedDate.getMonth(),
       year: this.props.selectedDate.getFullYear(),
-      selectedDay: []
+      selectedDay: [],
+      startDate: this.props.startDate,
+      endDate: this.props.endDate
     };
   },
 
@@ -404,6 +438,7 @@ var CalendarPicker = React.createClass({
   // Typically, when selectedDate is changed programmatically.
   //
   componentWillReceiveProps: function(newProps) {
+    var startDate = newProps.selectedDate;
     this.setState({
       date:  newProps.selectedDate,
       day:   newProps.selectedDate.getDate(),
@@ -436,8 +471,31 @@ var CalendarPicker = React.createClass({
     } = this.state,
       date = new Date(year, month, day);
 
-    this.setState({date: date});
-    this.props.onDateChange(date);
+    //this.setState({date: date});
+    //this.props.onDateChange(date);
+
+    if(!this.props.allowDateRangeSelection) {
+      this.setState({date: date});
+      this.props.onDateChange(date);
+    } else {
+      var startDate = this.state.startDate,
+      endDate = this.state.endDate;
+
+      if(!startDate) {
+        startDate = date;
+      } else if(!endDate){
+        if(date > startDate) {
+          endDate = date;
+        } else {
+          startDate = date;
+        }
+      } else {
+        startDate = date;
+        endDate = null;
+      }
+      this.setState( {startDate : startDate, endDate : endDate});
+      this.props.onDateChange( {startDate : startDate, endDate : endDate} )
+    }
   },
 
   render() {
@@ -472,7 +530,9 @@ var CalendarPicker = React.createClass({
           startFromMonday={this.props.startFromMonday}
           selectedDayColor={this.props.selectedDayColor}
           selectedDayTextColor={this.props.selectedDayTextColor}
-          textStyle={this.props.textStyle} />
+          textStyle={this.props.textStyle}
+          startDate={this.state.startDate}
+          endDate={this.state.endDate} />
       </View>
     );
   }
