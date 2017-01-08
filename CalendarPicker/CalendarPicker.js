@@ -87,7 +87,7 @@ var Day = React.createClass({
             </Text>
           </View>
         );
-      } 
+      }
       else {
         return (
           <View style={styles.dayWrapper}>
@@ -124,23 +124,23 @@ var Days = React.createClass({
   },
 
   componentDidMount() {
-    this.updateSelectedStates(this.props.date.getDate());
+    this.updateSelectedStates(this.props.date.getDate(), this.props.month, this.props.date.getMonth());
   },
 
   // Trigger date change if new props are provided.
   // Typically, when selectedDate is changed programmatically.
   //
   componentWillReceiveProps: function(newProps) {
-    this.updateSelectedStates(newProps.date.getDate());
+    this.updateSelectedStates(newProps.date.getDate(), this.props.month, this.props.date.getMonth());
   },
 
-  updateSelectedStates(day) {
+  updateSelectedStates(day, month = 0, oldMonth = 0) {
     var selectedStates = [],
       daysInMonth = getDaysInMonth(this.props.month, this.props.year),
       i;
 
     for (i = 1; i <= daysInMonth; i++) {
-      if (i === day) {
+      if (i === day && month === oldMonth) {
         selectedStates.push(true);
       } else {
         selectedStates.push(false);
@@ -417,15 +417,15 @@ var CalendarPicker = React.createClass({
   },
 
   onMonthChange(month) {
-    this.setState({month: month}, () => { this.onDateChange(); });
+    this.setState({month: month}); // , () => { this.onDateChange(); }
   },
 
   getNextYear(){
-    this.setState({year: this.state.year + 1}, () => { this.onDateChange(); });
+    this.setState({year: this.state.year + 1}); // , () => { this.onDateChange(); }
   },
 
   getPrevYear() {
-    this.setState({year: this.state.year - 1}, () => { this.onDateChange(); });
+    this.setState({year: this.state.year - 1}); //, () => { this.onDateChange(); }
   },
 
   onDateChange() {
